@@ -5,58 +5,79 @@ export default function App() {
   const data = useTelemetry();
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Medical Dashboard</h2>
+    <div className="dashboard">
 
-      <div style={styles.grid}>
-        <Card label="BP" value={data.bp} />
-        <Card label="SpO₂" value={data.spo2 + "%"} />
-        <Card label="HR" value={data.hr + " bpm"} />
-        <Card label="Temperature" value={data.temp + " °C"} />
+      <div className="top-grid">
+
+        <div className="panel">
+          <div className="title">ECG MONITOR</div>
+
+          <ECG value={data.ecg} />
+
+          <h2 className={
+            data.alerts?.hr === "warning"
+              ? "status-warning"
+              : "status-normal"
+          }>
+            HR: {data.hr} BPM
+          </h2>
+        </div>
+
+        <div className="panel">
+          <div className="title">SYSTEM STATUS</div>
+
+          <h1 className="big-number">
+            {data.hr}
+          </h1>
+
+          <p>BPM</p>
+
+          <p className={
+            data.alerts?.hr === "warning"
+              ? "status-warning"
+              : "status-normal"
+          }>
+            {data.alerts?.hr || "normal"}
+          </p>
+        </div>
+
       </div>
 
-      <ECG value={data.ecg} />
-    </div>
-  );
-}
+      <div className="bottom-grid">
 
-function Card({ label, value }) {
-  return (
-    <div style={styles.card}>
-      <div style={styles.label}>{label}</div>
-      <div style={styles.value}>{value}</div>
+        <div className="panel">
+          <div className="title">TEMPERATURE</div>
+
+          <h1 className="big-number">
+            {data.temp}<span className="unit">°C</span>
+          </h1>
+        </div>
+
+        <div className="panel">
+          <div className="title">SpO₂</div>
+
+          <h1 className="big-number">
+            {data.spo2}<span className="unit">%</span>
+          </h1>
+        </div>
+
+      </div>
+<div
+  style={{
+    marginTop: 20,
+    padding: 10,
+    border: "1px solid #1e293b",
+    borderRadius: 8,
+    display: "flex",
+    justifyContent: "space-between",
+    background: "#020617",
+    color: "#22c55e"
+  }}
+>
+  <span>STATUS: SYSTEM ACTIVE</span>
+  <span>ARDUINO CONNECTED</span>
+</div>
+
     </div>
   );
 }
-{/* <ECG value={data.ecg} /> */}
-const styles = {
-  container: {
-    padding: 30,
-    fontFamily: "Arial",
-    background: "#0b1220",
-    minHeight: "100vh",
-    color: "white"
-  },
-  title: {
-    marginBottom: 20
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: 20
-  },
-  card: {
-    background: "#111c2d",
-    padding: 20,
-    borderRadius: 12,
-    border: "1px solid #1f2a44"
-  },
-  label: {
-    fontSize: 12,
-    color: "#94a3b8"
-  },
-  value: {
-    fontSize: 28,
-    fontWeight: "bold"
-  }
-};

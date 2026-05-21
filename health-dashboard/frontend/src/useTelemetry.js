@@ -6,7 +6,12 @@ export default function useTelemetry() {
     spo2: "--",
     hr: "--",
     temp: "--",
-    ecg: 0
+    ecg: 0,
+    alerts: {
+      spo2: "normal",
+      hr: "normal",
+      temp: "normal"
+    }
   });
 
   useEffect(() => {

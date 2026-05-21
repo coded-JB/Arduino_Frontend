@@ -37,10 +37,13 @@ export default function ECG({ value = 0 }) {
 
 function draw(ctx, canvas, data) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid(ctx, canvas);
 
   ctx.beginPath();
-  ctx.strokeStyle = "#22c55e";
-  ctx.lineWidth = 2;
+ ctx.strokeStyle = "#00ff88";
+ ctx.lineWidth = 2;
+ ctx.shadowColor = "#00ff88";
+ ctx.shadowBlur = 10;
 
   const slice = canvas.width / data.length;
   let x = 0;
@@ -57,20 +60,48 @@ function draw(ctx, canvas, data) {
   ctx.stroke();
 }
 
+function drawGrid(ctx, canvas) {
+  const spacing = 20;
+
+  ctx.strokeStyle = "rgba(34,197,94,0.08)";
+  ctx.lineWidth = 1;
+
+  for (let x = 0; x < canvas.width; x += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < canvas.height; y += spacing) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+}
+
 const styles = {
   wrapper: {
-    marginTop: 20,
-    background: "#0b1220",
-    padding: 15,
-    borderRadius: 12
+    width: "100%",
+    background: "#050816",
+    borderRadius: 12,
+    overflow: "hidden",
+    border: "1px solid #1e293b",
+    boxShadow: "0 0 20px rgba(0,255,120,0.15)"
   },
+
   title: {
-    color: "#94a3b8",
-    marginBottom: 10
+    color: "#22c55e",
+    fontSize: 16,
+    marginBottom: 10,
+    fontWeight: "bold"
   },
+
   canvas: {
     width: "100%",
-    height: 160,
-    background: "#070d18"
+    height: 220,
+    background: "#020617",
+    display: "block"
   }
 };
