@@ -2,24 +2,47 @@ import { useEffect, useState } from "react";
 
 export default function useTelemetry() {
   const [data, setData] = useState({
-    bp: "--",
-    spo2: "--",
-    hr: "--",
-    temp: "--",
-    ecg: 0,
-    alerts: {
-      spo2: "normal",
-      hr: "normal",
-      temp: "normal"
+    ecg: {
+      signal: 0,
+      qrsDuration: 92,
+      status: "normal"
+    },
+    alerts: [],
+    device: {
+      connected: true,
+      message: "Connected"
     }
+
   });
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:3000");
 
     ws.onmessage = (event) => {
-      const parsed = JSON.parse(event.data);
-      setData(parsed);
+
+      const incoming = JSON.parse(event.data);
+
+      if (incoming.type === "device_status") {
+
+        setData((prev) => ({
+          ...prev,
+          device: {
+            connected: incoming.connected,
+            message: incoming.message
+          }
+        }));
+
+        return;
+      }
+
+      setData((prev) => ({
+        ...incoming,
+
+        device: {
+          connected: true,
+          message: "Arduino Connected"
+        }
+      }));
     };
 
     ws.onerror = (err) => {

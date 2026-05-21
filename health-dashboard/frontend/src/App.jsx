@@ -1,6 +1,7 @@
 import useTelemetry from "./useTelemetry";
 import ECG from "./ECG";
-
+import AlertPanel from "./AlertPanel";
+import DeviceStatus from "./components/DeviceStatus";
 export default function App() {
   const data = useTelemetry();
 
@@ -12,14 +13,14 @@ export default function App() {
         <div className="panel">
           <div className="title">ECG MONITOR</div>
 
-          <ECG value={data.ecg} />
+          <ECG hr={data.heart?.bpm} />
 
           <h2 className={
-            data.alerts?.hr === "warning"
+            data.qrs?.status === "warning"
               ? "status-warning"
               : "status-normal"
           }>
-            HR: {data.hr} BPM
+            HR: {data.heart?.bpm} BPM
           </h2>
         </div>
 
@@ -27,20 +28,24 @@ export default function App() {
           <div className="title">SYSTEM STATUS</div>
 
           <h1 className="big-number">
-            {data.hr}
+            {data.heart?.bpm}
           </h1>
 
           <p>BPM</p>
 
           <p className={
-            data.alerts?.hr === "warning"
+            data.qrs?.status === "warning"
               ? "status-warning"
               : "status-normal"
           }>
-            {data.alerts?.hr || "normal"}
+            {data.qrs?.status || "normal"}
           </p>
         </div>
 
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <DeviceStatus device={data.device} />
       </div>
 
       <div className="bottom-grid">
@@ -49,7 +54,7 @@ export default function App() {
           <div className="title">TEMPERATURE</div>
 
           <h1 className="big-number">
-            {data.temp}<span className="unit">°C</span>
+            {data.temperature?.value}<span className="unit">°C</span>
           </h1>
         </div>
 
@@ -57,9 +62,11 @@ export default function App() {
           <div className="title">SpO₂</div>
 
           <h1 className="big-number">
-            {data.spo2}<span className="unit">%</span>
+            {data.spo2?.value}<span className="unit">%</span>
           </h1>
         </div>
+
+        <AlertPanel alerts={data.alerts} />
 
       </div>
 <div
