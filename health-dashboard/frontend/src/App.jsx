@@ -2,18 +2,25 @@ import useTelemetry from "./useTelemetry";
 import ECG from "./ECG";
 import AlertPanel from "./AlertPanel";
 import DeviceStatus from "./components/DeviceStatus";
+import TelemetryStatsPanel from "./components/TelemetryStatsPanel";
+import TrendChart from "./components/TrendChart";
+import Header from "./components/Header";
+import FullscreenButton from "./components/FullscreenButton";
+
 export default function App() {
   const data = useTelemetry();
 
   return (
     <div className="dashboard">
+      <Header />
+      <FullscreenButton />
 
       <div className="top-grid">
 
         <div className="panel">
           <div className="title">ECG MONITOR</div>
 
-          <ECG hr={data.heart?.bpm} />
+          <ECG value={data.ecg?.signal} />
 
           <h2 className={
             data.qrs?.status === "warning"
@@ -68,6 +75,13 @@ export default function App() {
 
         <AlertPanel alerts={data.alerts} />
 
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <TelemetryStatsPanel history={data.history} />
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <TrendChart history={data.history} />
       </div>
 <div
   style={{

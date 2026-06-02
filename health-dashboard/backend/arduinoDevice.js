@@ -16,11 +16,20 @@ class ArduinoDevice {
 
     const ports = await SerialPort.list();
 
-    return ports.find(
-      p =>
+    return ports.find((p) => {
+
+      const manufacturer =
+        p.manufacturer?.toLowerCase() || "";
+
+      return (
         p.vendorId === "2341" ||
-        p.manufacturer?.toLowerCase().includes("arduino")
-    );
+        manufacturer.includes("arduino") ||
+        manufacturer.includes("wch") ||
+        manufacturer.includes("ch340") ||
+        manufacturer.includes("silicon")
+      );
+
+    });
   }
 
   async connect() {
@@ -110,6 +119,7 @@ class ArduinoDevice {
           ecg: {
             signal: Number(parsed.ECG || 0),
 
+            // Temporary simulated QRS duration
             qrsDuration:
               92 + Math.floor(Math.random() * 6),
 

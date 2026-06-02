@@ -7,10 +7,15 @@ body {
 
 .dashboard {
   min-height: 100vh;
-  padding: 20px;
-  background: #050816;
-}
 
+  padding: 20px;
+
+  background: #050816;
+
+  max-width: 1800px;
+
+  margin: auto;
+}
 .top-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -64,6 +69,72 @@ body {
   color: red;
 }
 
+.telemetry-stats {
+  text-align: left;
+}
+
+.telemetry-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 16px;
+}
+
+.telemetry-stat {
+  border-top: 3px solid var(--metric-color);
+  padding-top: 14px;
+}
+
+.telemetry-stat-label {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.telemetry-stat-current {
+  color: var(--metric-color);
+  font-size: 38px;
+  font-weight: bold;
+  line-height: 1.1;
+  margin-top: 8px;
+}
+
+.telemetry-stat-current span {
+  color: #94a3b8;
+  font-size: 0.38em;
+  margin-left: 6px;
+  vertical-align: baseline;
+}
+
+.telemetry-stat-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.telemetry-stat-breakdown div {
+  border-left: 1px solid #1e293b;
+  padding-left: 10px;
+}
+
+.telemetry-stat-breakdown span,
+.telemetry-stat-breakdown strong {
+  display: block;
+}
+
+.telemetry-stat-breakdown span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.telemetry-stat-breakdown strong {
+  color: #e2e8f0;
+  font-size: 18px;
+  margin-top: 2px;
+}
+
 @keyframes pulse {
 
   0% {
@@ -76,6 +147,20 @@ body {
 
   100% {
     box-shadow: 0 0 5px rgba(255,0,0,0.3);
+  }
+
+}
+
+@media (max-width: 1000px) {
+
+  .top-grid,
+  .bottom-grid {
+
+    grid-template-columns: 1fr;
+  }
+
+  .telemetry-stats-grid {
+    grid-template-columns: 1fr;
   }
 
 }

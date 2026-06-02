@@ -1,5 +1,8 @@
+const hardwareStatus = require("./hardwareStatus");
+const path = require("path");
 let deviceConnected = false;
 let lastTelemetryTime = Date.now();
+const history = [];
 
 const express = require("express");
 const http = require("http");
@@ -19,6 +22,23 @@ const device = new ArduinoDevice();
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
+});
+
+app.use(
+  express.static(
+    path.join(__dirname, "../frontend/dist")
+  )
+);
+
+app.get("/{*splat}", (req, res) => {
+
+  res.sendFile(
+    path.join(
+      __dirname,
+      "../frontend/dist/index.html"
+    )
+  );
+
 });
 
 server.listen(3000, () => {
@@ -84,6 +104,24 @@ device.start((data) => {
   lastTelemetryTime = Date.now();
 
   const enriched = enrichTelemetry(data);
+
+  history.push({
+    time: Date.now(),
+
+    hr: enriched.heart.bpm,
+
+    spo2: enriched.spo2.value,
+
+    temp: enriched.temperature.value
+  });
+
+  if (history.length > 50) {
+    history.shift();
+  }
+
+  enriched.history = history;
+
+  enriched.hardware = hardwareStatus;
 
   wss.clients.forEach((client) => {
 

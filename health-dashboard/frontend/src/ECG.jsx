@@ -40,16 +40,21 @@ function draw(ctx, canvas, data) {
   drawGrid(ctx, canvas);
 
   ctx.beginPath();
- ctx.strokeStyle = "#00ff88";
- ctx.lineWidth = 2;
- ctx.shadowColor = "#00ff88";
- ctx.shadowBlur = 10;
+  ctx.strokeStyle = "#00ff88";
+  ctx.lineWidth = 2;
+  ctx.shadowColor = "#00ff88";
+  ctx.shadowBlur = 10;
 
-  const slice = canvas.width / data.length;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = Math.max(max - min, 1);
+  const mid = min + range / 2;
+  const amplitude = canvas.height * 0.35;
+  const slice = data.length > 1 ? canvas.width / (data.length - 1) : 0;
   let x = 0;
 
   for (let i = 0; i < data.length; i++) {
-    const y = canvas.height / 2 - data[i] * 50;
+    const y = canvas.height / 2 - ((data[i] - mid) / range) * amplitude;
 
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);

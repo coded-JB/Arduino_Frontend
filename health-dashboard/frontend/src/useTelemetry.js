@@ -8,6 +8,7 @@ export default function useTelemetry() {
       status: "normal"
     },
     alerts: [],
+    history: [],
     device: {
       connected: true,
       message: "Connected"
