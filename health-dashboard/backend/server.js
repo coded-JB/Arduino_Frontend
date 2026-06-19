@@ -1,160 +1,385 @@
-const hardwareStatus = require("./hardwareStatus");
-const path = require("path");
-let deviceConnected = false;
-let lastTelemetryTime = Date.now();
-const history = [];
+const hardwareStatus=require("./hardwareStatus");
+const path=require("path");
 
-const express = require("express");
-const http = require("http");
-const WebSocket = require("ws");
-const cors = require("cors");
+const express=require("express");
+const http=require("http");
+const WebSocket=require("ws");
+const cors=require("cors");
 
-const ArduinoDevice = require("./arduinoDevice");
+const ArduinoDevice=
+require("./arduinoDevice");
 
-const app = express();
-app.use(cors());
-
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-const device = new ArduinoDevice();
-
-
-wss.on("connection", (ws) => {
-  console.log("Client connected");
-});
+const app=
+express();
 
 app.use(
-  express.static(
-    path.join(__dirname, "../frontend/dist")
-  )
+cors()
 );
 
-app.get("/{*splat}", (req, res) => {
+const server=
+http.createServer(
+app
+);
 
-  res.sendFile(
-    path.join(
-      __dirname,
-      "../frontend/dist/index.html"
-    )
-  );
-
+const wss=
+new WebSocket.Server({
+server
 });
 
-server.listen(3000, () => {
-  console.log("Backend running on port 3000");
-});
+const device=
+new ArduinoDevice();
 
-function enrichTelemetry(data) {
+//=========================
+let deviceConnected=
+false;
 
-  const alerts = [];
+let staleTelemetry=
+false;
 
-  // HEART RATE
-  if (data.heart.bpm < 55) {
-    alerts.push({
-      type: "warning",
-      source: "heart",
-      message: "Bradycardia detected"
-    });
-  }
+let lastTelemetry=
+Date.now();
 
-  if (data.heart.bpm > 110) {
-    alerts.push({
-      type: "critical",
-      source: "heart",
-      message: "Tachycardia detected"
-    });
-  }
+let lastDeviceMessage=
+"Arduino disconnected";
 
-  // SPO2
-  if (data.spo2.value < 95) {
-    alerts.push({
-      type: "warning",
-      source: "spo2",
-      message: "Low oxygen saturation"
-    });
-  }
+const history=[];
 
-  if (data.spo2.value < 90) {
-    alerts.push({
-      type: "critical",
-      source: "spo2",
-      message: "Critical oxygen level"
-    });
-  }
+const MAX_HISTORY=
+300;
 
-  // TEMPERATURE
-  if (data.temperature.value > 37.5) {
-    alerts.push({
-      type: "warning",
-      source: "temperature",
-      message: "Elevated temperature"
-    });
-  }
+//=========================
+function broadcast(
+payload
+)
+{
+const msg=
+JSON.stringify(
+payload
+);
 
-  return {
-    ...data,
-    alerts
-  };
+wss.clients.forEach(
+client=>
+{
+if(
+client.readyState
+===
+WebSocket.OPEN
+)
+{
+client.send(
+msg
+);
+}
+}
+);
 }
 
-device.start((data) => {
+//=========================
+function enrichTelemetry(
+data
+)
+{
+const alerts=[];
 
-  deviceConnected = true;
-  lastTelemetryTime = Date.now();
+const bpm=
+data.heart?.bpm;
 
-  const enriched = enrichTelemetry(data);
+const spo2=
+data.spo2?.value;
 
-  history.push({
-    time: Date.now(),
+const temp=
+data.temperature?.value;
 
-    hr: enriched.heart.bpm,
+// HR
+if(
+typeof bpm==="number"
+)
+{
+if(
+bpm<55
+)
+{
+alerts.push({
+type:"warning",
+message:
+"Bradycardia detected"
+});
+}
 
-    spo2: enriched.spo2.value,
+if(
+bpm>110
+)
+{
+alerts.push({
+type:"critical",
+message:
+"Tachycardia detected"
+});
+}
+}
 
-    temp: enriched.temperature.value
-  });
+// SpO₂
+if(
+typeof spo2==="number"
+&&
+spo2>0
+)
+{
+if(
+spo2<95
+)
+{
+alerts.push({
+type:"warning",
+message:
+"Low oxygen saturation"
+});
+}
 
-  if (history.length > 50) {
-    history.shift();
-  }
+if(
+spo2<90
+)
+{
+alerts.push({
+type:"critical",
+message:
+"Critical oxygen level"
+});
+}
+}
 
-  enriched.history = history;
+// Temp
+if(
+typeof temp==="number"
+)
+{
+if(
+temp>37.5
+)
+{
+alerts.push({
+type:"warning",
+message:
+"Elevated temperature"
+});
+}
 
-  enriched.hardware = hardwareStatus;
+if(
+temp>39
+)
+{
+alerts.push({
+type:"critical",
+message:
+"High fever"
+});
+}
+}
 
-  wss.clients.forEach((client) => {
+return{
+...data,
+alerts
+};
+}
 
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(enriched));
-    }
+//=========================
+wss.on(
+"connection",
+ws=>
+{
+console.log(
+"Client connected"
+);
 
-  });
+ws.send(
+JSON.stringify({
+type:
+"device_status",
 
+connected:
+deviceConnected,
+
+message:
+lastDeviceMessage,
+
+timestamp:
+Date.now()
+})
+);
+}
+);
+
+//=========================
+app.use(
+express.static(
+path.join(
+__dirname,
+"../frontend/dist"
+)
+)
+);
+
+app.get(
+"/{*splat}",
+(req,res)=>
+{
+res.sendFile(
+path.join(
+__dirname,
+"../frontend/dist/index.html"
+)
+);
+}
+);
+
+//=========================
+device.start(
+
+(data)=>
+{
+deviceConnected=
+true;
+
+staleTelemetry=
+false;
+
+lastTelemetry=
+Date.now();
+
+lastDeviceMessage=
+"Receiving telemetry";
+
+const enriched=
+enrichTelemetry(
+data
+);
+
+hardwareStatus.update(
+enriched
+);
+
+// append history
+history.push({
+
+time:
+new Date()
+.toLocaleTimeString(),
+
+hr:
+enriched.heart?.bpm
+??
+null,
+
+spo2:
+enriched.spo2?.value
+??
+null,
+
+temp:
+enriched.temperature?.value
+??
+null,
+
+qrs:
+enriched.ecg?.qrsDuration
+??
+null
 });
 
-setInterval(() => {
+if(
+history.length
+>
+MAX_HISTORY
+)
+{
+history.shift();
+}
 
-  const now = Date.now();
+enriched.history=
+history;
 
-  if (now - lastTelemetryTime > 3000) {
+enriched.hardware=
+hardwareStatus;
 
-    deviceConnected = false;
+enriched.timestamp=
+Date.now();
 
-    const disconnectPayload = {
-      type: "device_status",
-      connected: false,
-      message: "Arduino disconnected"
-    };
+broadcast(
+enriched
+);
 
-    wss.clients.forEach((client) => {
+},
 
-      if (client.readyState === 1) {
-        client.send(JSON.stringify(disconnectPayload));
-      }
+(status)=>
+{
+deviceConnected=
+status.connected;
 
-    });
+lastDeviceMessage=
+status.message;
 
-  }
+broadcast({
+type:
+"device_status",
 
-}, 1000);
+connected:
+status.connected,
+
+message:
+status.message,
+
+timestamp:
+Date.now()
+});
+}
+
+);
+
+//=========================
+setInterval(
+()=>
+{
+if(
+Date.now()
+-
+lastTelemetry
+>
+5000
+)
+{
+staleTelemetry=
+true;
+
+broadcast({
+
+type:
+"device_status",
+
+connected:
+deviceConnected,
+
+message:
+deviceConnected
+?
+"Telemetry timeout"
+:
+"Arduino disconnected",
+
+timestamp:
+Date.now()
+});
+}
+
+},
+1000
+);
+
+//=========================
+server.listen(
+3000,
+()=>
+{
+console.log(
+"Backend running on :3000"
+);
+});

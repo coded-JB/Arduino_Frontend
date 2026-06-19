@@ -1,75 +1,224 @@
-export default function AlertPanel({ alerts = [] }) {
+import { useMemo } from "react";
 
-  return (
-    <div className="panel">
+export default function AlertPanel({
+alerts=[]
+})
+{
+const normalized=
+useMemo(
+()=>
+{
+const seen=
+new Set();
 
-      <div className="title">
-        ALERTS
-      </div>
+return alerts
+.filter(
+a=>
+{
+const key=
+`${a.type}-${a.message}`;
 
-      <div
-        style={{
-          marginTop: 20,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12
-        }}
-      >
+if(
+seen.has(key)
+)
+return false;
 
-        {alerts.length === 0 && (
-          <div
-            style={{
-              color: "#22c55e",
-              fontWeight: "bold"
-            }}
-          >
-            SYSTEM NORMAL
-          </div>
-        )}
+seen.add(key);
 
-        {alerts.map((alert, index) => (
+return true;
+}
+)
+.slice(
+0,
+6
+);
+},
+[
+alerts
+]
+);
 
-          <div
-            key={index}
-            style={{
-              padding: 14,
-              borderRadius: 10,
-              border:
-                alert.type === "critical"
-                  ? "1px solid red"
-                  : "1px solid orange",
+return(
 
-              background:
-                alert.type === "critical"
-                  ? "rgba(255,0,0,0.1)"
-                  : "rgba(255,165,0,0.1)",
+<div className="panel">
 
-              animation:
-                alert.type === "critical"
-                  ? "pulse 1s infinite"
-                  : "none"
-            }}
-          >
+<div className="title">
 
-            <div
-              style={{
-                fontWeight: "bold",
-                marginBottom: 5
-              }}
-            >
-              {alert.type.toUpperCase()}
-            </div>
+ALERTS
 
-            <div>
-              {alert.message}
-            </div>
+</div>
 
-          </div>
+<div
+style={{
+marginTop:20,
+display:"flex",
+flexDirection:"column",
+gap:12
+}}
+>
 
-        ))}
+{
+normalized.length===0
+&&
+(
+<div
+style={{
+padding:16,
+borderRadius:10,
+background:
+"rgba(34,197,94,.08)",
+border:
+"1px solid rgba(34,197,94,.25)",
 
-      </div>
+color:"#22c55e",
 
-    </div>
-  );
+fontWeight:700
+}}
+>
+
+SYSTEM NORMAL
+
+<div
+style={{
+marginTop:8,
+fontSize:12,
+opacity:.7
+}}
+>
+
+No active telemetry alerts
+
+</div>
+
+</div>
+)
+}
+
+{
+normalized.map(
+(
+alert,
+index
+)=>
+{
+const critical=
+alert.type==="critical";
+
+const warning=
+alert.type==="warning";
+
+return(
+
+<div
+key={
+index
+}
+
+style={{
+padding:14,
+
+borderRadius:10,
+
+border:
+critical
+?
+"1px solid #ef4444"
+:
+warning
+?
+"1px solid #f59e0b"
+:
+"1px solid #38bdf8",
+
+background:
+critical
+?
+"rgba(239,68,68,.10)"
+:
+warning
+?
+"rgba(245,158,11,.10)"
+:
+"rgba(56,189,248,.10)",
+
+boxShadow:
+critical
+?
+"0 0 18px rgba(239,68,68,.18)"
+:
+"none",
+
+transition:
+".2s"
+}}
+>
+
+<div
+style={{
+display:"flex",
+justifyContent:
+"space-between"
+}}
+>
+
+<div
+style={{
+fontWeight:700
+}}
+>
+
+{
+critical
+?
+"CRITICAL"
+:
+warning
+?
+"WARNING"
+:
+"INFO"
+}
+
+</div>
+
+<div
+style={{
+fontSize:12,
+opacity:.6
+}}
+>
+
+{
+new Date()
+.toLocaleTimeString()
+}
+
+</div>
+
+</div>
+
+<div
+style={{
+marginTop:8
+}}
+>
+
+{
+alert.message
+}
+
+</div>
+
+</div>
+
+);
+}
+)
+}
+
+</div>
+
+</div>
+
+);
 }

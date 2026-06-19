@@ -1,166 +1,481 @@
-const { SerialPort } = require("serialport");
-const { ReadlineParser } = require("@serialport/parser-readline");
+const { SerialPort } =
+require(
+"serialport"
+);
 
-class ArduinoDevice {
+const {
+ReadlineParser
+}=
+require(
+"@serialport/parser-readline"
+);
 
-  constructor() {
-    this.port = null;
-    this.parser = null;
-    this.connected = false;
-    this.onData = null;
+class ArduinoDevice
+{
+constructor(
+options={}
+)
+{
+this.port=null;
 
-    this.connect();
-  }
+this.parser=null;
 
-  async findArduinoPort() {
+this.connected=false;
 
-    const ports = await SerialPort.list();
+this.onData=null;
 
-    return ports.find((p) => {
+this.onStatus=null;
 
-      const manufacturer =
-        p.manufacturer?.toLowerCase() || "";
+this.reconnectTimer=null;
 
-      return (
-        p.vendorId === "2341" ||
-        manufacturer.includes("arduino") ||
-        manufacturer.includes("wch") ||
-        manufacturer.includes("ch340") ||
-        manufacturer.includes("silicon")
-      );
+this.lastECG=512;
 
-    });
-  }
+this.path=
+options.path
+||
+process.env.ARDUINO_PORT;
 
-  async connect() {
-
-    try {
-
-      const portInfo = await this.findArduinoPort();
-
-      if (!portInfo) {
-
-        console.log("Waiting for Arduino...");
-
-        setTimeout(() => this.connect(), 3000);
-
-        return;
-      }
-
-      console.log("Connecting to:", portInfo.path);
-
-      this.port = new SerialPort({
-        path: portInfo.path,
-        baudRate: 9600
-      });
-
-      this.parser = this.port.pipe(
-        new ReadlineParser({
-          delimiter: "\n"
-        })
-      );
-
-      this.connected = true;
-
-      console.log("Arduino connected");
-
-      this.attachListeners();
-
-    } catch (err) {
-
-      console.error("Connection failed:", err.message);
-
-      setTimeout(() => this.connect(), 3000);
-    }
-  }
-
-  attachListeners() {
-
-    this.port.on("close", () => {
-
-      console.log("Arduino disconnected");
-
-      this.connected = false;
-
-      setTimeout(() => this.connect(), 3000);
-    });
-
-    this.port.on("error", (err) => {
-
-      console.error("Serial error:", err.message);
-
-      this.connected = false;
-    });
-
-    this.parser.on("data", (line) => {
-
-      try {
-
-        line = line.trim();
-
-        const parts = line.split(",");
-
-        const parsed = {};
-
-        parts.forEach((part) => {
-
-          const [key, value] = part.split(":");
-
-          if (key && value) {
-            parsed[key.trim()] = value.trim();
-          }
-
-        });
-
-        const bpm = Number(parsed.HR || 0);
-
-        const data = {
-
-          ecg: {
-            signal: Number(parsed.ECG || 0),
-
-            // Temporary simulated QRS duration
-            qrsDuration:
-              92 + Math.floor(Math.random() * 6),
-
-            status:
-              bpm > 110 || bpm < 55
-                ? "warning"
-                : "normal"
-          },
-
-          heart: {
-            bpm
-          },
-
-          temperature: {
-            value: Number(parsed.TEMP || 0)
-          },
-
-          spo2: {
-            value: Number(parsed.SPO2 || 0)
-          }
-
-        };
-
-        if (this.onData) {
-          this.onData(data);
-        }
-
-      } catch (err) {
-
-        console.error("Parse error:", err.message);
-
-      }
-
-    });
-
-  }
-
-  start(onData) {
-    this.onData = onData;
-  }
-
+this.baudRate=
+Number(
+options.baudRate
+||
+process.env.ARDUINO_BAUD
+||
+9600
+);
 }
 
-module.exports = ArduinoDevice;
+//=====================
+emitStatus(
+connected,
+message
+)
+{
+this.connected=
+connected;
+
+if(
+this.onStatus
+)
+{
+this.onStatus({
+type:
+"device_status",
+
+connected,
+
+message
+});
+}
+}
+
+//=====================
+cleanup()
+{
+try
+{
+if(
+this.parser
+)
+{
+this.parser.removeAllListeners();
+}
+
+if(
+this.port
+)
+{
+this.port.removeAllListeners();
+
+if(
+this.port.isOpen
+)
+{
+this.port.close();
+}
+}
+
+}
+catch{}
+}
+
+//=====================
+scheduleReconnect()
+{
+if(
+this.reconnectTimer
+)
+return;
+
+this.reconnectTimer=
+setTimeout(
+()=>
+{
+this.reconnectTimer=
+null;
+
+this.connect();
+
+},
+3000
+);
+}
+
+//=====================
+async findArduinoPort()
+{
+const ports=
+await SerialPort.list();
+
+return ports.find(
+p=>
+{
+const m=
+p.manufacturer
+?.toLowerCase()
+||
+"";
+
+return(
+p.vendorId==="2341"
+||
+m.includes("arduino")
+||
+m.includes("wch")
+||
+m.includes("ch340")
+||
+m.includes("silicon")
+);
+}
+);
+}
+
+//=====================
+async connect()
+{
+try
+{
+this.cleanup();
+
+const portInfo=
+this.path
+?
+{
+path:
+this.path
+}
+:
+await this.findArduinoPort();
+
+if(
+!portInfo
+)
+{
+this.emitStatus(
+false,
+"Waiting for Arduino"
+);
+
+this.scheduleReconnect();
+
+return;
+}
+
+console.log(
+"Connecting:",
+portInfo.path
+);
+
+this.port=
+new SerialPort({
+
+path:
+portInfo.path,
+
+baudRate:
+this.baudRate
+});
+
+this.parser=
+this.port.pipe(
+new ReadlineParser({
+delimiter:
+"\n"
+})
+);
+
+this.emitStatus(
+true,
+`Connected ${portInfo.path}`
+);
+
+this.attach();
+
+}
+catch(
+err
+)
+{
+console.error(
+err.message
+);
+
+this.emitStatus(
+false,
+err.message
+);
+
+this.scheduleReconnect();
+}
+}
+
+//=====================
+attach()
+{
+this.port.on(
+"close",
+()=>
+{
+this.emitStatus(
+false,
+"Arduino disconnected"
+);
+
+this.scheduleReconnect();
+}
+);
+
+this.port.on(
+"error",
+(err)=>
+{
+this.emitStatus(
+false,
+err.message
+);
+}
+);
+
+this.parser.on(
+"data",
+(line)=>
+{
+try
+{
+line=
+line.trim();
+
+console.log(
+"[RAW SERIAL]",
+line
+);
+
+if(
+!line
+)
+return;
+
+// no contact
+if(
+line===
+"STATUS:NO_CONTACT"
+)
+{
+this.emitStatus(
+true,
+"No patient contact"
+);
+
+return;
+}
+
+const obj={};
+
+line
+.split(",")
+
+.forEach(
+p=>
+{
+const[
+k,
+v
+]=
+p.split(":");
+
+if(
+k
+&&
+v
+)
+{
+obj[
+k.trim()
+]=
+v.trim();
+}
+}
+);
+
+// parse
+const bpm=
+Number(
+obj.HR
+);
+
+let ecg=
+Number(
+obj.ECG
+);
+
+const temp=
+Number(
+obj.TEMP
+);
+
+const spo2=
+obj.SPO2==="NA"
+?
+0
+:
+Number(
+obj.SPO2
+);
+
+const qrs=
+obj.QRS==="NA"
+?
+null
+:
+Number(
+obj.QRS
+);
+
+// validate
+if(
+!Number.isFinite(ecg)
+||
+!Number.isFinite(temp)
+)
+return;
+
+// smooth ECG
+ecg=
+Math.round(
+(
+this.lastECG*2
++
+ecg
+)
+/
+3
+);
+
+this.lastECG=
+ecg;
+
+// build
+const packet=
+{
+timestamp:
+Date.now(),
+
+ecg:
+{
+signal:
+ecg,
+
+qrsDuration:
+Number.isFinite(qrs)
+?
+qrs
+:
+null,
+
+status:
+spo2===0
+?
+"no-contact"
+:
+(
+bpm>110
+||
+bpm<55
+)
+?
+"warning"
+:
+"normal"
+},
+
+heart:
+{
+bpm:
+Number.isFinite(bpm)
+?
+bpm
+:
+null
+},
+
+temperature:
+{
+value:
+temp
+},
+
+spo2:
+{
+value:
+Math.max(
+0,
+Math.min(
+98,
+spo2
+)
+)
+}
+};
+
+if(
+this.onData
+)
+{
+this.onData(
+packet
+);
+}
+
+}
+catch(
+err
+)
+{
+console.error(
+"Parse:",
+err.message
+);
+}
+}
+);
+}
+
+//=====================
+start(
+onData,
+onStatus
+)
+{
+this.onData=
+onData;
+
+this.onStatus=
+onStatus;
+
+this.connect();
+}
+}
+
+module.exports=
+ArduinoDevice;

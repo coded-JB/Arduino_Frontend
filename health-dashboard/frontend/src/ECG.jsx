@@ -1,112 +1,353 @@
-import { useEffect, useRef } from "react";
+import {
+useEffect,
+useRef
+}
+from "react";
 
-export default function ECG({ value = 0 }) {
-  const canvasRef = useRef(null);
-  const dataRef = useRef([]);
+export default function ECG({
+value=0,
+status="normal",
+qrsDuration=null
+})
+{
+const canvasRef=useRef(null);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+const points=useRef([]);
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+const animation=useRef();
 
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 160;
+useEffect(()=>{
 
-    const safeValue = typeof value === "number" ? value : 0;
+points.current.push(
+typeof value==="number"
+?value
+:512
+);
 
-    dataRef.current.push(safeValue);
-
-    if (dataRef.current.length > 200) {
-      dataRef.current.shift();
-    }
-
-    draw(ctx, canvas, dataRef.current);
-  }, [value]);
-
-  return (
-    <div style={styles.wrapper}>
-      <div style={styles.title}>ECG Monitor</div>
-      <canvas ref={canvasRef} style={styles.canvas} />
-    </div>
-  );
+if(
+points.current.length
+>
+400
+)
+{
+points.current.shift();
 }
 
-/* ---------- DRAW ---------- */
+},[value]);
 
-function draw(ctx, canvas, data) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid(ctx, canvas);
+useEffect(()=>{
 
-  ctx.beginPath();
-  ctx.strokeStyle = "#00ff88";
-  ctx.lineWidth = 2;
-  ctx.shadowColor = "#00ff88";
-  ctx.shadowBlur = 10;
+const canvas=
+canvasRef.current;
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = Math.max(max - min, 1);
-  const mid = min + range / 2;
-  const amplitude = canvas.height * 0.35;
-  const slice = data.length > 1 ? canvas.width / (data.length - 1) : 0;
-  let x = 0;
+if(!canvas)
+return;
 
-  for (let i = 0; i < data.length; i++) {
-    const y = canvas.height / 2 - ((data[i] - mid) / range) * amplitude;
+const ctx=
+canvas.getContext("2d");
 
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+canvas.width=
+canvas.offsetWidth;
 
-    x += slice;
-  }
+canvas.height=
+220;
 
-  ctx.stroke();
+function render()
+{
+draw(
+ctx,
+canvas,
+points.current,
+status,
+qrsDuration
+);
+
+animation.current=
+requestAnimationFrame(
+render
+);
 }
 
-function drawGrid(ctx, canvas) {
-  const spacing = 20;
+render();
 
-  ctx.strokeStyle = "rgba(34,197,94,0.08)";
-  ctx.lineWidth = 1;
+return()=>{
 
-  for (let x = 0; x < canvas.width; x += spacing) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
+cancelAnimationFrame(
+animation.current
+);
 
-  for (let y = 0; y < canvas.height; y += spacing) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
+};
+
+},[
+status,
+qrsDuration
+]);
+
+return(
+
+<div
+style={styles.wrapper}
+>
+
+<div
+style={styles.title}
+>
+
+ECG MONITOR
+
+</div>
+
+<canvas
+ref={canvasRef}
+style={styles.canvas}
+/>
+
+</div>
+
+);
 }
 
-const styles = {
-  wrapper: {
-    width: "100%",
-    background: "#050816",
-    borderRadius: 12,
-    overflow: "hidden",
-    border: "1px solid #1e293b",
-    boxShadow: "0 0 20px rgba(0,255,120,0.15)"
-  },
+function draw(
+ctx,
+canvas,
+data,
+status,
+qrs
+)
+{
+ctx.fillStyle=
+"#020617";
 
-  title: {
-    color: "#22c55e",
-    fontSize: 16,
-    marginBottom: 10,
-    fontWeight: "bold"
-  },
+ctx.fillRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
 
-  canvas: {
-    width: "100%",
-    height: 220,
-    background: "#020617",
-    display: "block"
-  }
+drawGrid(
+ctx,
+canvas
+);
+
+if(
+data.length<2
+)
+return;
+
+ctx.beginPath();
+
+if(
+status==="warning"
+)
+{
+ctx.strokeStyle=
+"#ef4444";
+}
+else if(
+qrs
+)
+{
+ctx.strokeStyle=
+"#00ffff";
+}
+else
+{
+ctx.strokeStyle=
+"#00ff88";
+}
+
+ctx.lineWidth=3;
+
+ctx.shadowBlur=12;
+
+ctx.shadowColor=
+ctx.strokeStyle;
+
+const min=
+350;
+
+const max=
+800;
+
+const scale=
+canvas.height*0.35;
+
+for(
+let i=0;
+i<data.length;
+i++
+)
+{
+const x=
+i*
+(
+canvas.width/
+400
+);
+
+let y=
+canvas.height/2-
+(
+(
+data[i]-min
+)
+/
+(
+max-min
+)
+)
+*
+scale;
+
+y=
+Math.max(
+20,
+Math.min(
+canvas.height-20,
+y
+)
+);
+
+if(
+i===0
+)
+ctx.moveTo(
+x,
+y
+);
+
+else
+ctx.lineTo(
+x,
+y
+);
+}
+
+ctx.stroke();
+
+// sweep line
+ctx.strokeStyle=
+"rgba(0,255,150,.8)";
+
+ctx.shadowBlur=
+20;
+
+ctx.beginPath();
+
+ctx.moveTo(
+canvas.width-10,
+0
+);
+
+ctx.lineTo(
+canvas.width-10,
+canvas.height
+);
+
+ctx.stroke();
+
+if(qrs)
+{
+ctx.fillStyle=
+"#00ffff";
+
+ctx.beginPath();
+
+ctx.arc(
+canvas.width-40,
+30,
+8,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+ctx.fillStyle=
+"#fff";
+
+ctx.font=
+"14px Arial";
+
+ctx.fillText(
+`${qrs} ms`,
+canvas.width-130,
+35
+);
+}
+}
+
+function drawGrid(
+ctx,
+canvas
+)
+{
+ctx.strokeStyle=
+"rgba(34,197,94,.08)";
+
+for(
+let x=0;
+x<canvas.width;
+x+=20
+)
+{
+ctx.beginPath();
+
+ctx.moveTo(
+x,
+0
+);
+
+ctx.lineTo(
+x,
+canvas.height
+);
+
+ctx.stroke();
+}
+
+for(
+let y=0;
+y<canvas.height;
+y+=20
+)
+{
+ctx.beginPath();
+
+ctx.moveTo(
+0,
+y
+);
+
+ctx.lineTo(
+canvas.width,
+y
+);
+
+ctx.stroke();
+}
+}
+
+const styles={
+
+wrapper:{
+background:"#050816",
+borderRadius:12,
+padding:12,
+overflow:"hidden",
+border:"1px solid #1e293b"
+},
+
+title:{
+color:"#22c55e",
+marginBottom:10,
+fontWeight:"bold"
+},
+
+canvas:{
+width:"100%",
+height:220
+}
+
 };

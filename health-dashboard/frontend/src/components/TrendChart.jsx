@@ -1,73 +1,157 @@
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid
-} from "recharts";
+ResponsiveContainer,
+LineChart,
+Line,
+XAxis,
+YAxis,
+Tooltip,
+CartesianGrid,
+Legend
+}
+from
+"recharts";
 
-export default function TrendChart({ history = [] }) {
+export default function TrendChart({
+history=[]
+})
+{
+const formatted=
+history
+.slice(-120)
+.map(
+(item,index)=>
+({
+time:
+item.time
+||
+index,
 
-  const formatted = history.map((item, index) => ({
-    index,
-    hr: item.hr,
-    spo2: item.spo2,
-    temp: item.temp
-  }));
+hr:
+item.hr
+??
+null,
 
-  return (
-    <div className="panel">
+spo2:
+item.spo2
+??
+null,
 
-      <div className="title">
-        TELEMETRY TRENDS
-      </div>
+temp:
+item.temp
+??
+null
+})
+);
 
-      <div style={{ width: "100%", height: 300 }}>
+return(
 
-        <ResponsiveContainer>
+<div className="panel">
 
-          <LineChart data={formatted}>
+<div className="title">
 
-            <CartesianGrid stroke="#1e293b" />
+TELEMETRY TRENDS
 
-            <XAxis dataKey="index" />
+</div>
 
-            <YAxis />
+<div
+style={{
+width:"100%",
+height:320
+}}
+>
 
-            <Tooltip />
+<ResponsiveContainer>
 
-            <Line
-              type="monotone"
-              dataKey="hr"
-              stroke="#00ff88"
-              strokeWidth={2}
-              dot={false}
-            />
+<LineChart
+data={
+formatted
+}
+>
 
-            <Line
-              type="monotone"
-              dataKey="spo2"
-              stroke="#38bdf8"
-              strokeWidth={2}
-              dot={false}
-            />
+<CartesianGrid
+stroke="#1e293b"
+strokeDasharray="4 4"
+/>
 
-            <Line
-              type="monotone"
-              dataKey="temp"
-              stroke="#f97316"
-              strokeWidth={2}
-              dot={false}
-            />
+<XAxis
+dataKey="time"
+tick={{
+fill:"#64748b"
+}}
+tickLine={false}
+/>
 
-          </LineChart>
+<YAxis
+yAxisId="left"
+domain={[40,160]}
+tick={{
+fill:"#22c55e"
+}}
+tickLine={false}
+/>
 
-        </ResponsiveContainer>
+<YAxis
+yAxisId="right"
+orientation="right"
+domain={[20,45]}
+tick={{
+fill:"#f97316"
+}}
+tickLine={false}
+/>
 
-      </div>
+<Tooltip
+contentStyle={{
+background:"#020617",
+border:
+"1px solid #1e293b",
+borderRadius:8,
+color:"#fff"
+}}
+/>
 
-    </div>
-  );
+<Legend/>
+
+<Line
+yAxisId="left"
+type="natural"
+dataKey="hr"
+name="Heart Rate"
+stroke="#00ff88"
+strokeWidth={3}
+dot={false}
+isAnimationActive={false}
+/>
+
+<Line
+yAxisId="left"
+type="natural"
+dataKey="spo2"
+name="SpO₂"
+stroke="#38bdf8"
+strokeWidth={3}
+dot={false}
+isAnimationActive={false}
+/>
+
+<Line
+yAxisId="right"
+type="natural"
+dataKey="temp"
+name="Temperature"
+stroke="#f97316"
+strokeWidth={3}
+dot={false}
+isAnimationActive={false}
+/>
+
+</LineChart>
+
+</ResponsiveContainer>
+
+</div>
+
+</div>
+
+);
 }
